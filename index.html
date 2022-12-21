@@ -14,24 +14,26 @@
     <script src="https://threejs.org/examples/js/controls/TrackballControls.js" type="text/javascript"></script>
     <script>
 
-    // control the speed of the game
+    // ---control the speed of the game---
     var speed = 5;
     var delta = 1 / speed;
     var movement_speed = 0.0;
 
     var clock = new THREE.Clock();
 
-    // control the movement of the game
+    // ---control the movement of the game---
     var keys = [];
     var direction = new THREE.Vector3(0, 1, 0);
 
-    // declare the game objects
+    // ---declare the game objects---
     var snake = [];
     var apple;
+    var appleChoice = false;
     var goldenApple;
+    var poisonApple;
     var cube;
 
-    // control the size of the game board with boardEdge
+    // ---control the size of the game board with boardEdge---
     var pad = .15;
     var boardEdge = 20;
     var boardSize = boardEdge + (boardEdge - 1) * pad;
@@ -43,10 +45,10 @@
 
     window.onload = function() {
 
-      // Three.js boilerplate code
+      // ---Three.js boilerplate code---
       scene = new THREE.Scene();
 
-      fov = 75;
+      fov = 50;
       ratio = window.innerWidth / window.innerHeight;
       zNear = 1;
       zFar = 10000;
@@ -61,9 +63,8 @@
       ambientLight = new THREE.AmbientLight();
       scene.add( ambientLight );
 
-      light = new THREE.DirectionalLight( 0xffffff, 1.0 );
-      light.position.set( 10, 100, 10 );
-      scene.add( light );
+      var light = new THREE.HemisphereLight( 0xffffbb, 0x080820, 1 );
+      scene.add( light );   
 
       controls = new THREE.TrackballControls( camera, renderer.domElement );
 
@@ -71,7 +72,7 @@
       // ACTION!
       //
 
-      // texture 3 sides of the board 
+      // ---texture 3 sides of the board ---
       var floorTexture = new THREE.TextureLoader().load( 'rock.jpg' );
       var floorGeometry = new THREE.PlaneBufferGeometry( 24, 24 );
       var floorMaterial = new THREE.MeshBasicMaterial( {
@@ -110,7 +111,9 @@
       floor.position.x = -12;
       scene.add( floor );
 
-      // create snake array
+
+
+      // ---create snake array---
       for ( var i = 0; i < 8; i ++ ) {
           var snakeMaterial = new THREE.MeshPhongMaterial({ color: 0x00ff00 });
           snake.push( new createCube( new THREE.Vector3( 
@@ -121,14 +124,30 @@
                                       /* scene */     scene ));
       }
 
-      // create apple object
-      var appleMaterial = new THREE.MeshPhongMaterial( { color: 0xff0000 } );
+      // ---create apple object---
+      appleChoice = true;
+      var texture = new THREE.TextureLoader().load('apple.png');
+      var appleMaterial = new THREE.MeshStandardMaterial( {
+            map: texture
+      });
       apple = new createCube( createApple(), appleMaterial, scene );
 
-      // create more objects
-      var goldenAppleMaterial = new THREE.MeshPhongMaterial({ color: 0xbba051 });
+      // ---golden apple doubles snake length---
+      var texture = new THREE.TextureLoader().load('gold-apple.png');
+      var goldenAppleMaterial = new THREE.MeshStandardMaterial( {
+            map: texture
+      });
       goldenApple = new createCube( createApple(), goldenAppleMaterial, scene );
+      appleChoice = false;
 
+      // ---poison white apple removes half the snake length---
+      var texture = new THREE.TextureLoader().load('danger.png');
+      var poisonAppleMaterial = new THREE.MeshStandardMaterial( {
+            map: texture
+      });
+      poisonApple = new createCube( createApple(), poisonAppleMaterial, scene );
+
+      // ---create center cube to redirect snake in different directions---
       var texture = new THREE.TextureLoader().load('bg.jpg');
       var material = new THREE.MeshStandardMaterial( {
             map: texture,
@@ -136,7 +155,7 @@
       });
       cube = new createCube( new THREE.Vector3(0.58, 0.58, 0.58), material, scene );
       
-      // begin counting time 
+      // ---begin counting time ---
       clock.startTime = 0.0;
       
       animate();
@@ -150,35 +169,35 @@
 
         if ( collided == false ) {
 
-          // increment speed counter 
+          // ---increment speed counter---
           movement_speed += clock.getDelta();
 
-          // speed check determines snake movement
+          // ---speed check determines snake movement---
           if ( movement_speed > delta ) {
 
-            // remove and declare the first element in the array as the tail
+            // ---remove and declare the first element in the array as the tail---
             var tail = snake.shift();
 
-            // Declare head as the last element in the array
+            // ---Declare head as the last element in the array---
             var head = snake[snake.length - 1];
 
-            // Determine direction of the snake using keys array
+            // ---Determine direction of the snake using keys array---
             direction = keys.length > 0 ? keys.pop(0) : direction;
 
 
-            // Determine snake movement using head position, direction and padding
+            // ---Determine snake movement using head position, direction and padding---
             var movement = new THREE.Vector3(
                               /* X */    head.mesh.position.x + direction.x + Math.sign(direction.x) * pad, 
                               /* Y */    head.mesh.position.y + direction.y + Math.sign(direction.y) * pad,
                               /* Z */    head.mesh.position.z + direction.z + Math.sign(direction.z) * pad
             )
-            // set the new x, y and z position of the tail of the snake 
+            // ---set the new x, y and z position of the tail of the snake---
             tail.setPosition( movement );
 
-            // push the new tail position on to the snake array 
+            // ---push the new tail position on to the snake array---
             snake.push( tail );
 
-            // replace the old head with the new one
+            // ---replace the old head with the new one---
             head = tail;
 
             if ( head.mesh.position.distanceTo( apple.mesh.position ) < 2 ) {
@@ -200,7 +219,16 @@
 
             };
 
-            // detect for collisions within the snake array itself
+            if ( head.mesh.position.distanceTo( poisonApple.mesh.position ) < 2 ) {
+              poisonApple.setPosition( createApple() );
+              for ( var i = 0; i < snake.length / 2; i++ ) {
+                var send_it = snake.shift();
+                send_it.setPosition( disappear );
+              }
+
+            };
+
+            // ---detect for collisions within the snake array itself---
             for (var i = snake.length - 2; i > -1; i--) {
               if ( head.mesh.position.distanceTo(snake[i].mesh.position) < 1) {
                 collided = true;
@@ -210,7 +238,7 @@
               }
             };
 
-            // satisfying loop
+            // ---satisfying loop---
             if ( head.mesh.position.distanceTo( cube.mesh.position ) < 1) {
                         if ( direction.x == 1 ) {
                     direction.x = 0;
@@ -263,11 +291,12 @@
         } else if ( collided == true ) {
 
           if (count % 5 == 0 ) {
-            var last = snake.shift();
-            last.setPosition( disappear );
+            snake.shift().setPosition( disappear );
           }
 
           apple.setPosition( disappear );
+          goldenApple.setPosition( disappear );
+          poisonApple.setPosition( disappear );
 
         };
 
@@ -289,7 +318,12 @@
 
       function createCube( vector, material, scene, geometry ) {
 
+        if ( appleChoice == true ) {
+          this.geometry = new THREE.SphereGeometry( 1.25, 32, 16 );
+        } else {
+
         this.geometry = new THREE.BoxGeometry( 2, 2, 2 );
+        }
 
         this.mesh = new THREE.Mesh(this.geometry, material);
 

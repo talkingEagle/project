@@ -28,6 +28,7 @@
     // declare the game objects
     var snake = [];
     var apple;
+    var goldenApple;
     var cube;
 
     // control the size of the game board with boardEdge
@@ -38,6 +39,7 @@
 
     var collided = false;
     var count = 0;
+    var disappear = new THREE.Vector3( 10000, 10000, 10000 );
 
     window.onload = function() {
 
@@ -109,7 +111,7 @@
       scene.add( floor );
 
       // create snake array
-      for ( var i = 0; i < 15; i ++ ) {
+      for ( var i = 0; i < 8; i ++ ) {
           var snakeMaterial = new THREE.MeshPhongMaterial({ color: 0x00ff00 });
           snake.push( new createCube( new THREE.Vector3( 
                                           /* X */     0.5 + pad / 2, 
@@ -124,6 +126,9 @@
       apple = new createCube( createApple(), appleMaterial, scene );
 
       // create more objects
+      var goldenAppleMaterial = new THREE.MeshPhongMaterial({ color: 0xbba051 });
+      goldenApple = new createCube( createApple(), goldenAppleMaterial, scene );
+
       var texture = new THREE.TextureLoader().load('bg.jpg');
       var material = new THREE.MeshStandardMaterial( {
             map: texture,
@@ -140,6 +145,8 @@
       function animate() {
 
         requestAnimationFrame( animate );
+
+        count++;
 
         if ( collided == false ) {
 
@@ -174,14 +181,23 @@
             // replace the old head with the new one
             head = tail;
 
-            if ( head.mesh.position.distanceTo(apple.mesh.position) < 2) {
-                  apple.setPosition( createApple(
+            if ( head.mesh.position.distanceTo( apple.mesh.position ) < 2 ) {
+              apple.setPosition( createApple() );
+              snake.unshift( new createCube( new THREE.Vector3(
+                                                    snake[0].mesh.position.x, 
+                                                    snake[0].mesh.position.y, 
+                                                    snake[0].mesh.position.z), new THREE.MeshToonMaterial( { color: 0x00ff00 } ), scene));
+            };
 
-                  ) );
-                  snake.unshift( new createCube( new THREE.Vector3(
-                                                                snake[0].mesh.position.x, 
-                                                                snake[0].mesh.position.y, 
-                                                                snake[0].mesh.position.z), new THREE.MeshToonMaterial( { color: 0x00ff00 } ), scene));
+            if ( head.mesh.position.distanceTo( goldenApple.mesh.position ) < 2 ) {
+              goldenApple.setPosition( createApple() );
+              for ( var i = 0; i < snake.length / 2; i++ ) {
+                snake.unshift( new createCube( new THREE.Vector3(
+                                                    snake[0].mesh.position.x, 
+                                                    snake[0].mesh.position.y, 
+                                                    snake[0].mesh.position.z), new THREE.MeshToonMaterial( { color: 0x00ff00 } ), scene));
+              }
+
             };
 
             // detect for collisions within the snake array itself
@@ -238,17 +254,21 @@
             }
 
             movement_speed = 0;
-        
+
+            if ( clock.elapsedTime > 5 ) {
+                cube.setPosition( disappear );
+            }
           };
 
         } else if ( collided == true ) {
 
-          count++;
-          if (count % 3 == 0 ) {
+          if (count % 5 == 0 ) {
             var last = snake.shift();
-            var disappear = new THREE.Vector3( 10000, 10000, 10000 );
             last.setPosition( disappear );
           }
+
+          apple.setPosition( disappear );
+
         };
 
         controls.update();
@@ -256,49 +276,31 @@
 
       };
 
-      function restart() {
-
-        end = false;
-        direction = new THREE.Vector3( 1, 0, 0 );
-
-      };
-
       function createApple() {
 
-      var x, y, z;
-      x = (Math.random() * (boardEdge - 1)); 
-      y = (Math.random() * (boardEdge - 1)); 
-      z = (Math.random() * (boardEdge - 1)); 
+        var x, y, z;
+        x = (Math.random() * (boardEdge - 1)); 
+        y = (Math.random() * (boardEdge - 1)); 
+        z = (Math.random() * (boardEdge - 1)); 
 
-      return new THREE.Vector3((x + x * pad) - halfBoard + 0.5, (y + y * pad) - halfBoard + 0.5, (z + z * pad) - halfBoard + 0.5);
+        return new THREE.Vector3((x + x * pad) - halfBoard + 0.5, (y + y * pad) - halfBoard + 0.5, (z + z * pad) - halfBoard + 0.5);
 
       };
 
       function createCube( vector, material, scene, geometry ) {
 
-      //this.geometry = new THREE.SphereGeometry( 0.6, 32, 16 );
+        this.geometry = new THREE.BoxGeometry( 2, 2, 2 );
 
-      // this.geometry = new THREE.CylinderGeometry( 0.5, 0.5, 1, 16 );
+        this.mesh = new THREE.Mesh(this.geometry, material);
 
-      // this.geometry.rotateX(Math.PI/2);
-      // this.geometry.rotateY(Math.PI/2);
+        this.mesh.position.set(vector.x, vector.y, vector.z);
+        scene.add(this.mesh);
 
-      // this.geometry = new THREE.DodecahedronGeometry( 0.6 );
+        this.setPosition = function(vector) {
+            this.mesh.position.set( vector.x, vector.y, vector.z );
+        };
 
-      // this.geometry = new THREE.IcosahedronGeometry( 1 );
-
-       this.geometry = new THREE.BoxGeometry( 2, 2, 2 );
-
-      this.mesh = new THREE.Mesh(this.geometry, material);
-
-      this.mesh.position.set(vector.x, vector.y, vector.z);
-      scene.add(this.mesh);
-
-      this.setPosition = function(vector) {
-          this.mesh.position.set( vector.x, vector.y, vector.z );
       };
-
-};
 
       document.addEventListener("keydown", function(e){
                      if ( e.key == "ArrowUp" ){

@@ -118,6 +118,17 @@
       // ACTION!
       //
 
+      // Skybox Texture////////////////////////////////////////////////
+      geometry = new THREE.SphereGeometry (500, 60, 40);     
+      // LOad photo as a texture
+      texture = new THREE.TextureLoader().load( 'minecraft.png'
+        );
+      material = new THREE.MeshBasicMaterial({ map:texture,
+        side: THREE.BackSide });
+      sphere = new THREE.Mesh(geometry, material );
+      scene.add(sphere);
+      /////////////////////////////////////////////////////////////////
+
       // ---texture 3 sides of the board ---
       var floorTexture = new THREE.TextureLoader().load( 'rock.jpg' );
       var floorGeometry = new THREE.PlaneBufferGeometry( 24, 24 );
